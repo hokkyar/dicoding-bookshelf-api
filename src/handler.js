@@ -11,7 +11,7 @@ const addBookHandler = (request, h) => {
   const updatedAt = insertedAt
 
   // push newBook to books
-  if (name === undefined) {
+  if (name === undefined || name === '') {
     return h.response({
       status: 'fail',
       message: 'Gagal menambahkan buku. Mohon isi nama buku'
@@ -46,111 +46,87 @@ const addBookHandler = (request, h) => {
   }).code(500)
 }
 
-// GET ALL BOOK HANDLER
-const getAllBookHandler = (request, h) => {
+// GET ALL BOOKS HANDLER
+const getAllBooksHandler = (request, h) => {
   const { name, reading, finished } = request.query
-  const displayBook = []
-  if (name !== undefined) {
+  const displayBooks = []
+  let filteredBooks = []
+
+  if (name === undefined && reading === undefined && finished === undefined) {
     books.forEach((book) => {
-      if (book.name.toLowerCase().includes(name.toLowerCase())) {
-        const id = book.id
-        const name = book.name
-        const publisher = book.publisher
-        const tempBook = { id, name, publisher }
-        displayBook.push(tempBook)
-      }
+      const { id, name, publisher } = book
+      displayBooks.push({ id, name, publisher })
     })
-    return h.response({
-      status: 'success',
-      data: {
-        books: displayBook
-      }
-    }).code(200)
+  }
+
+  if (name !== undefined) {
+    filteredBooks = books.filter((book) => {
+      const queryBookName = name.toLowerCase()
+      const bookName = book.name.toLowerCase()
+      return new RegExp('\\b' + queryBookName + '\\b').test(bookName)
+    })
+
+    if (filteredBooks.length === 0) {
+      return h.response({
+        status: 'success',
+        data: {
+          books: displayBooks
+        }
+      }).code(200)
+    }
   }
 
   if (reading !== undefined) {
-    if (parseInt(reading) === 0) {
-      books.forEach((book) => {
-        if (!book.reading) {
-          const id = book.id
-          const name = book.name
-          const publisher = book.publisher
-          const tempBook = { id, name, publisher }
-          displayBook.push(tempBook)
-        }
-      })
-      return h.response({
-        status: 'success',
-        data: {
-          books: displayBook
-        }
-      }).code(200)
+    if (filteredBooks.length > 0) {
+      filteredBooks = (parseInt(reading) === 0) ? filteredBooks.filter((book) => !book.reading) : filteredBooks.filter((book) => book.reading)
+      if (filteredBooks.length === 0) {
+        return h.response({
+          status: 'success',
+          data: {
+            books: displayBooks
+          }
+        }).code(200)
+      }
     } else {
-      books.forEach((book) => {
-        if (book.reading) {
-          const id = book.id
-          const name = book.name
-          const publisher = book.publisher
-          const tempBook = { id, name, publisher }
-          displayBook.push(tempBook)
-        }
-      })
-      return h.response({
-        status: 'success',
-        data: {
-          books: displayBook
-        }
-      }).code(200)
+      filteredBooks = (parseInt(reading) === 0) ? books.filter((book) => !book.reading) : books.filter((book) => book.reading)
     }
   }
 
   if (finished !== undefined) {
-    if (parseInt(finished) === 0) {
-      books.forEach((book) => {
-        if (!book.finished) {
-          const id = book.id
-          const name = book.name
-          const publisher = book.publisher
-          const tempBook = { id, name, publisher }
-          displayBook.push(tempBook)
-        }
-      })
-      return h.response({
-        status: 'success',
-        data: {
-          books: displayBook
-        }
-      }).code(200)
+    if (filteredBooks.length > 0) {
+      filteredBooks = (parseInt(finished) === 0) ? filteredBooks.filter((book) => !book.finished) : filteredBooks.filter((book) => book.finished)
+      if (filteredBooks.length === 0) {
+        return h.response({
+          status: 'success',
+          data: {
+            books: displayBooks
+          }
+        }).code(200)
+      }
     } else {
-      books.forEach((book) => {
-        if (book.finished) {
-          const id = book.id
-          const name = book.name
-          const publisher = book.publisher
-          const tempBook = { id, name, publisher }
-          displayBook.push(tempBook)
-        }
-      })
-      return h.response({
-        status: 'success',
-        data: {
-          books: displayBook
-        }
-      }).code(200)
+      filteredBooks = (parseInt(finished) === 0) ? books.filter((book) => !book.finished) : books.filter((book) => book.finished)
     }
   }
 
-  books.forEach((book) => {
-    const id = book.id
-    const name = book.name
-    const publisher = book.publisher
-    const tempBook = { id, name, publisher }
-    displayBook.push(tempBook)
-  })
+  if (filteredBooks.length > 0) {
+    displayBooks.push(filteredBooks)
+    const queryResultBooks = []
+    displayBooks[0].forEach((book) => {
+      const { id, name, publisher } = book
+      queryResultBooks.push({ id, name, publisher })
+    })
+    return h.response({
+      status: 'success',
+      data: {
+        books: queryResultBooks
+      }
+    }).code(200)
+  }
+
   return h.response({
     status: 'success',
     data: {
-      books: displayBook
+      books: displayBooks
     }
   }).code(200)
 }
@@ -180,6 +156,7 @@ const editBookByIdHandler = (request, h) => {
   const { id } = request.params
   // get data from body
   const { name, year, author, summary, publisher, pageCount, readPage, reading } = request.payload
+  const finished = (readPage === pageCount)
   const updatedAt = new Date().toISOString()
 
   if (name === undefined) {
@@ -207,6 +184,7 @@ const editBookByIdHandler = (request, h) => {
       publisher,
       pageCount,
       readPage,
+      finished,
       reading,
       updatedAt
     }
@@ -241,4 +219,4 @@ const deleteBookByIdHandler = (request, h) => {
   }).code(404)
 }
 
-module.exports = { addBookHandler, getAllBookHandler, getBookByIdHandler, editBookByIdHandler, deleteBookByIdHandler }
+module.exports = { addBookHandler, getAllBooksHandler, getBookByIdHandler, editBookByIdHandler, deleteBookByIdHandler }
